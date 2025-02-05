@@ -1,76 +1,106 @@
-import React, { useContext } from "react";
-import { Container, Row, Col, Card, Button } from "react-bootstrap";
+import React, { useContext, useState } from "react";
+import { Container, Row, Col, Card, Button, Modal, Form } from "react-bootstrap";
 import ItemContext from "../Context/ItemContext";
-import axios from "axios";
-
-const API_URL = "https://crudcrud.com/api/c97ad2ea6ea5493591a25bfadf7ca1ad/items";
-
-const fetchItems = async (dispatch) => {
-    try {
-        const response = await axios.get(API_URL);
-        dispatch({ type: "SET_ITEMS", payload: response.data });
-    } catch (error) {
-        console.error("Error fetching items:", error);
-    }
-};
-
-const addItem = async (item, dispatch) => {
-    try {
-        const response = await axios.post(API_URL, item);
-        dispatch({ type: "ADD_ITEM", payload: response.data });
-    } catch (error) {
-        console.error("Error adding item:", error);
-    }
-};
-
-const updateItem = async (item, dispatch) => {
-    try {
-        await axios.put(`${API_URL}/${item._id}`, item);
-        dispatch({ type: "UPDATE_ITEM", payload: item });
-    } catch (error) {
-        console.error("Error updating item:", error);
-    }
-};
-
-const deleteItem = async (id, dispatch) => {
-    try {
-        await axios.delete(`${API_URL}/${id}`);
-        dispatch({ type: "DELETE_ITEM", payload: id });
-    } catch (error) {
-        console.error("Error deleting item:", error);
-    }
-};
-
-export { fetchItems, addItem, updateItem, deleteItem };
 
 const ItemList = () => {
-    const { items, dispatch } = useContext(ItemContext);
+    const { items, deleteItem, updateItem } = useContext(ItemContext);
+    const [show, setShow] = useState(false);
+    const [currentItem, setCurrentItem] = useState(null);
+    const [updatedTitle, setUpdatedTitle] = useState("");
+    const [updatedDescription, setUpdatedDescription] = useState("");
+    const [updatedImageUrl, setUpdatedImageUrl] = useState("");
 
-    const handleDelete = (id) => {
-        dispatch({ type: "DELETE_ITEM", payload: id });
+    const handleClose = () => setShow(false);
+
+    const handleShow = (item) => {
+        setCurrentItem(item);
+        setUpdatedTitle(item.title);
+        setUpdatedDescription(item.description);
+        setUpdatedImageUrl(item.imageUrl);
+        setShow(true);
+    };
+
+    const handleUpdate = () => {
+        if (currentItem) {
+            const updatedItem = {
+                ...currentItem,
+                title: updatedTitle,
+                description: updatedDescription,
+                imageUrl: updatedImageUrl,
+            };
+            updateItem(updatedItem);
+        }
+        handleClose();
     };
 
     return (
         <Container className="my-4">
             <Row>
                 {items.map((item) => (
-                    <Col md={4} key={item.id} className="mb-4">
+                    <Col md={4} key={item._id} className="mb-4">
                         <Card>
                             <Card.Img variant="top" src={item.imageUrl} />
                             <Card.Body>
                                 <Card.Title>{item.title}</Card.Title>
                                 <Card.Text>{item.description}</Card.Text>
-                                <Button
-                                    variant="danger"
-                                    onClick={() => handleDelete(item.id)}
-                                >
+                                <Button variant="danger" onClick={() => deleteItem(item._id)}>
                                     Delete
+                                </Button>{" "}
+                                <Button variant="primary" onClick={() => handleShow(item)}>
+                                    Edit
                                 </Button>
                             </Card.Body>
                         </Card>
                     </Col>
                 ))}
             </Row>
+
+            {currentItem && (
+                <Modal show={show} onHide={handleClose}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Edit Item</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Form>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Image URL</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    value={updatedImageUrl}
+                                    onChange={(e) => setUpdatedImageUrl(e.target.value)}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Title</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    value={updatedTitle}
+                                    onChange={(e) => setUpdatedTitle(e.target.value)}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Description</Form.Label>
+                                <Form.Control
+                                    as="textarea"
+                                    rows={3}
+                                    value={updatedDescription}
+                                    onChange={(e) => setUpdatedDescription(e.target.value)}
+                                />
+                            </Form.Group>
+                        </Form>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button variant="primary" onClick={handleUpdate}>
+                            Update Item
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+            )}
         </Container>
     );
 };
